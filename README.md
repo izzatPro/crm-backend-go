@@ -58,9 +58,9 @@ go run ./cmd/api
 Маршруты и доступ по роля:
 В проекте реализована ролевая модель доступа (RBAC). Доступ к API-эндпоинтам ограничивается ролью пользователя.
 
-```bash
-Public routes (без проверки роли)
 
+Public routes (без проверки роли)
+```bash
 POST /execs/login
 
 POST /execs/logout
