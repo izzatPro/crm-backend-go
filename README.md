@@ -52,11 +52,13 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -out cmd/api/cert.pem \
   -subj "/CN=localhost" && \
 go run ./cmd/api
+```
 
-Маршруты и доступ по ролям
 
+Маршруты и доступ по роля:
 В проекте реализована ролевая модель доступа (RBAC). Доступ к API-эндпоинтам ограничивается ролью пользователя.
 
+```bash
 Public routes (без проверки роли)
 
 POST /execs/login
@@ -66,9 +68,9 @@ POST /execs/logout
 POST /execs/forgotpassword
 
 POST /execs/resetpassword/reset/{resetcode}
-
+```
 Admin-only routes
-
+```bash
 DELETE /execs/{id}
 
 DELETE /teachers/{id}
@@ -78,9 +80,9 @@ DELETE /teachers
 DELETE /students
 
 DELETE /students/{id}
-
+```
 Admin & Manager routes
-
+```bash
 GET /execs
 
 GET /execs/{id}
@@ -98,9 +100,9 @@ PATCH /teachers
 PATCH /teachers/{id}
 
 PUT /teachers/{id}
-
+```
 Admin, Manager & Exec routes
-
+```bash
 GET /students
 
 GET /students/{id}
@@ -122,5 +124,5 @@ GET /teachers/{id}/students
 GET /teachers/{id}/studentcount
 
 POST /execs/{id}/updatepassword
-
+```
 Примечание: проверка ролей выполняется на уровне middleware до выполнения бизнес-логики хендлеров.
