@@ -146,7 +146,7 @@ func PatchExecs(updates []map[string]interface{}) error {
 
 		for k, v := range update {
 			if k == "id" {
-				continue 
+				continue
 			}
 			for i := 0; i < execVal.NumField(); i++ {
 				field := execType.Field(i)
@@ -294,12 +294,6 @@ func UpdatePasswordInDb(userId int, currentPassword, newPassword string) (bool, 
 		return false, utils.ErrorHandler(err, "failed to update the password")
 	}
 
-	
-	
-	
-	
-	
-
 	return true, nil
 }
 
@@ -341,8 +335,11 @@ func ForgotPasswordDbHandler(emailId string) error {
 		return utils.ErrorHandler(err, "Failed to send password reset email")
 	}
 
-	resetURL := fmt.Sprintf("https:
-	message := fmt.Sprintf("Forgot your password?  Reset your password using the following link: \n%s\nIf you didn't request a password reset, please ignore this email. This link is only valid for %d minutes.", resetURL, int(mins))
+	resetURL := fmt.Sprintf("http://localhost:3000/execs/resetpassword/reset/%s", token)
+	message := fmt.Sprintf(
+		"Forgot your password? Reset your password using the following link:\n%s\n\nIf you didn't request a password reset, please ignore this email. This link is only valid for %d minutes.",
+		resetURL, int(mins),
+	)
 
 	m := mail.NewMessage()
 	m.SetHeader("From", "schooladmin@shool.com")

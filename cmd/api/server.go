@@ -2,11 +2,11 @@ package main
 
 import (
 	"crypto/tls"
-	"embed"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+
 	mw "restapi/internal/api/middlewares"
 	"restapi/internal/api/router"
 	"restapi/pkg/utils"
@@ -14,50 +14,33 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var envFile embed.FS
-
-func loadEnvFromEmbeddedFile() {
-
-	content, err := envFile.ReadFile(".env")
-	if err != nil {
-		log.Fatalf("Error reading .env file: %v", err)
-	}
-
-	tempfile, err := os.CreateTemp("", ".env")
-	if err != nil {
-		log.Fatalf("Error creating temp .env file: %v", err)
-	}
-	defer os.Remove(tempfile.Name())
-
-	_, err = tempfile.Write(content)
-	if err != nil {
-		log.Fatalf("Error writing to temp .env file: %v", err)
-	}
-
-	err = tempfile.Close()
-	if err != nil {
-		log.Fatalf("Error closing temp file: %v", err)
-	}
-
-	err = godotenv.Load(tempfile.Name())
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
-}
-
 func main() {
-
-	loadEnvFromEmbeddedFile()
+	// Load .env from current working directory (project root)
+	// If .env not found — continue and rely on OS env vars
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: .env file not found. Using OS environment variables.")
+	}
 
 	port := os.Getenv("API_PORT")
+	if port == "" {
+		// sensible default
+		port = ":3000"
+	}
 
 	cert := os.Getenv("CERT_FILE")
 	key := os.Getenv("KEY_FILE")
 
-	tlsConfig := &tls.Config{
-		MinVersion: tls.VersionTLS10,
+	// If you run HTTPS/TLS, you must provide cert & key
+	if cert == "" || key == "" {
+		log.Println("Warning: CERT_FILE or KEY_FILE is empty. Server will start WITHOUT TLS.")
 	}
 
+	// Safer minimum TLS version
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
+
+	// HPP options (example)
 	hppOptions := mw.HPPOptions{
 		CheckQuery:                  true,
 		CheckBody:                   true,
@@ -65,22 +48,46 @@ func main() {
 		Whitelist:                   []string{"sortBy", "sortOrder", "name", "age", "class"},
 	}
 
-	router := router.MainRouter()
-	jwtMiddleware := mw.MiddlewaresExcludePaths(mw.JWTMiddleware, "/execs/login", "/execs/forgotpassword", "/execs/resetpassword/reset")
+	// Router
+	r := router.MainRouter()
 
-	secureMux := utils.ApplyMiddlewares(router, mw.SecurityHeaders, mw.Compression, mw.Hpp(hppOptions), mw.XSSMiddleware, jwtMiddleware, mw.ResponseTimeMiddleware, mw.Cors)
+	// JWT middleware excluded paths (public routes)
+	jwtMiddleware := mw.MiddlewaresExcludePaths(
+		mw.JWTMiddleware,
+		"/execs/login",
+		"/execs/forgotpassword",
+		"/execs/resetpassword/reset",
+	)
+
+	// Apply middlewares
+	secureMux := utils.ApplyMiddlewares(
+		r,
+		mw.SecurityHeaders,
+		mw.Compression,
+		mw.Hpp(hppOptions),
+		mw.XSSMiddleware,
+		jwtMiddleware,
+		mw.ResponseTimeMiddleware,
+		mw.Cors,
+	)
 
 	server := &http.Server{
-		Addr: port,
-
+		Addr:      port,
 		Handler:   secureMux,
 		TLSConfig: tlsConfig,
 	}
 
-	fmt.Println("Server is running on port: ", port)
-	err := server.ListenAndServeTLS(cert, key)
-	if err != nil {
-		log.Fatalln("Error starting the server", err)
+	fmt.Println("Server is running on:", port)
+
+	// Start server: prefer TLS if cert & key are provided
+	var err error
+	if cert != "" && key != "" {
+		err = server.ListenAndServeTLS(cert, key)
+	} else {
+		err = server.ListenAndServe()
 	}
 
+	if err != nil && err != http.ErrServerClosed {
+		log.Fatalln("Error starting the server:", err)
+	}
 }
