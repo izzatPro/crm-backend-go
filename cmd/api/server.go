@@ -9,6 +9,7 @@ import (
 
 	mw "restapi/internal/api/middlewares"
 	"restapi/internal/api/router"
+	"restapi/internal/repository/sqlconnect"
 	"restapi/pkg/utils"
 
 	"github.com/joho/godotenv"
@@ -20,6 +21,12 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("Warning: .env file not found. Using OS environment variables.")
 	}
+
+	// Инициализация пула соединений с БД
+	if err := sqlconnect.InitDBPool(); err != nil {
+		log.Fatalln("Failed to initialize database pool:", err)
+	}
+	defer sqlconnect.CloseDBPool()
 
 	port := os.Getenv("API_PORT")
 	if port == "" {
